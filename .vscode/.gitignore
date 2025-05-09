@@ -8,3 +8,6 @@
 # Ignore all other files
 .python.env
 *.json
+
+# Template files copied from binary installed IsaacSim 4.5 for pip installed vscode setting
+!isaacsim/*
