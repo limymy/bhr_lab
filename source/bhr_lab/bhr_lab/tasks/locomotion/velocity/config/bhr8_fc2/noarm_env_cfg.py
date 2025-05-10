@@ -112,9 +112,16 @@ class Bhr8Fc2NoArmFlatEnvCfg(Bhr8Fc2NoArmRoughEnvCfg):
         self.curriculum.terrain_levels = None
 
 @configclass
+class Bhr8Fc2RandomizationEventCfg(RandomizationEventCfg):
+    '''Randomization event for the BHR8 FC2 no arm environment'''
+    def __post_init__(self):
+        super().__post_init__()
+        self.add_link_mass.params["asset_cfg"].body_names=[".*hip.*", ".*thigh", ".*calf", ".*foot", ".*shoulder.*", ".*bigarm"]
+
+@configclass
 class Bhr8Fc2NoArmRoughRandomEnvCfg(Bhr8Fc2NoArmRoughEnvCfg):
     '''Configuration for the BHR8 FC2 no arm environment with rough terrain and randomization'''
-    events: RandomizationEventCfg = RandomizationEventCfg()
+    events: Bhr8Fc2RandomizationEventCfg = Bhr8Fc2RandomizationEventCfg()
 
     def __post_init__(self):
         super().__post_init__()
@@ -122,7 +129,7 @@ class Bhr8Fc2NoArmRoughRandomEnvCfg(Bhr8Fc2NoArmRoughEnvCfg):
 @configclass
 class Bhr8Fc2NoArmFlatRandomEnvCfg(Bhr8Fc2NoArmFlatEnvCfg):
     '''Configuration for the BHR8 FC2 no arm environment with flat terrain and randomization'''
-    events: RandomizationEventCfg = RandomizationEventCfg()
+    events: Bhr8Fc2RandomizationEventCfg = Bhr8Fc2RandomizationEventCfg()
 
     def __post_init__(self):
         super().__post_init__()

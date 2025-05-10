@@ -45,3 +45,33 @@ gym.register(
         "rsl_rl_cfg_entry_point": Bhr8Fc2NoArmMirrorPPORunnerCfg,
     },
 )
+
+gym.register(
+    id="bhr8_fc2_noarm_flat",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": Bhr8Fc2NoArmFlatEnvCfg,
+        "rsl_rl_cfg_entry_point": Bhr8Fc2BasePPORunnerCfg,
+    },
+)
+
+gym.register(
+    id="bhr8_fc2_noarm_flat_random",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": Bhr8Fc2NoArmFlatRandomEnvCfg,
+        "rsl_rl_cfg_entry_point": Bhr8Fc2BasePPORunnerCfg,
+    },
+)
+
+gym.register(
+    id="bhr8_fc2_noarm_rough_random",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": Bhr8Fc2NoArmRoughRandomEnvCfg,
+        "rsl_rl_cfg_entry_point": Bhr8Fc2BasePPORunnerCfg,
+    },
+)
