@@ -24,7 +24,7 @@ Second training:
 python scripts/rsl_rl/train.py --task=bhr8_fc2_noarm_flat_random_mirror --headless --num_envs=10240 --max_iterations=3000 --resume
 ```
 
-Second training:
+Third training:
 ```
 python scripts/rsl_rl/train.py --task=bhr8_fc2_noarm_rough_random_mirror --headless --num_envs=10240 --max_iterations=3000 --resume
 ```
