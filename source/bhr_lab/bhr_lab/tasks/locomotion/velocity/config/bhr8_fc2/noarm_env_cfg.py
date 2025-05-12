@@ -112,6 +112,16 @@ class Bhr8Fc2NoArmFlatEnvCfg(Bhr8Fc2NoArmRoughEnvCfg):
         self.curriculum.terrain_levels = None
 
 @configclass
+class Bhr8Fc2NoArmFlatNSCEnvCfg(Bhr8Fc2NoArmFlatEnvCfg):
+    '''Configuration for the BHR8 FC2 no arm environment with flat terrain'''
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        # disable self collisions
+        self.scene.robot.spawn.articulation_props.enabled_self_collisions = False
+
+@configclass
 class Bhr8Fc2RandomizationEventCfg(RandomizationEventCfg):
     '''Randomization event for the BHR8 FC2 no arm environment'''
     def __post_init__(self):
