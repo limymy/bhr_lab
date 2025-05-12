@@ -16,4 +16,3 @@ class BaseRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()
-        
