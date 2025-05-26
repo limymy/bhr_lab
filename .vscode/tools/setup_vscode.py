@@ -216,7 +216,7 @@ def main():
     isaaclab_settings = header_message + isaaclab_settings
 
     # write the Isaac Lab settings file
-    isaaclab_vscode_filename = os.path.join(PROJECT_DIR, ".vscode", "settings2.json")
+    isaaclab_vscode_filename = os.path.join(PROJECT_DIR, ".vscode", "settings.json")
     with open(isaaclab_vscode_filename, "w") as f:
         f.write(isaaclab_settings)
 
