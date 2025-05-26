@@ -59,6 +59,18 @@ if not os.path.exists(isaacsim_dir):
 ISAACSIM_DIR = isaacsim_dir
 """Path to the isaac-sim directory."""
 
+# obtain the isaaclab directory
+import isaaclab
+if hasattr(isaaclab, "ISAACLAB_EXT_DIR"):
+    # IsaacLab installed by source
+    ISAACLAB_EXT_DIR = isaaclab.ISAACLAB_EXT_DIR
+else:
+    # IsaacLab installed by pip
+    from isaaclab.source.isaaclab.isaaclab import ISAACLAB_EXT_DIR
+ISAACLAB_ASSETS_DIR = ISAACLAB_EXT_DIR + "_assets"
+ISAACLAB_RL_DIR     = ISAACLAB_EXT_DIR + "_rl"    
+ISAACLAB_TASKS_DIR  = ISAACLAB_EXT_DIR + "_tasks" 
+ISAACLAB_MIMIC_DIR  = ISAACLAB_EXT_DIR + "_mimic" 
 
 def overwrite_python_analysis_extra_paths(isaaclab_settings: str) -> str:
     """Overwrite the python.analysis.extraPaths in the Isaac Lab settings file.
@@ -75,7 +87,8 @@ def overwrite_python_analysis_extra_paths(isaaclab_settings: str) -> str:
         The settings string with overwritten python analysis extra paths.
     """
     # isaac-sim settings
-    isaacsim_vscode_filename = os.path.join(ISAACSIM_DIR, ".vscode", "settings.json")
+    # isaacsim_vscode_filename = os.path.join(ISAACSIM_DIR, ".vscode", "settings.json")
+    isaacsim_vscode_filename = os.path.join(PROJECT_DIR, ".vscode", "isaacsim", "settings.json")
 
     # we use the isaac-sim settings file to get the python.analysis.extraPaths for kit extensions
     # if this file does not exist, we will not add any extra paths
@@ -98,8 +111,9 @@ def overwrite_python_analysis_extra_paths(isaaclab_settings: str) -> str:
         path_names = [path_name for path_name in path_names if len(path_name) > 0]
 
         # change the path names to be relative to the Isaac Lab directory
-        rel_path = os.path.relpath(ISAACSIM_DIR, PROJECT_DIR)
-        path_names = ['"${workspaceFolder}/' + rel_path + "/" + path_name + '"' for path_name in path_names]
+        # rel_path = os.path.relpath(ISAACSIM_DIR, PROJECT_DIR)
+        # path_names = ['"${workspaceFolder}/' + rel_path + "/" + path_name + '"' for path_name in path_names]
+        path_names = ['"'+ISAACSIM_DIR + '/' + path_name + '"' for path_name in path_names]
     else:
         path_names = []
         print(
@@ -113,6 +127,12 @@ def overwrite_python_analysis_extra_paths(isaaclab_settings: str) -> str:
     # add the path names that are in the Isaac Lab extensions directory
     isaaclab_extensions = os.listdir(os.path.join(PROJECT_DIR, "source"))
     path_names.extend(['"${workspaceFolder}/source/' + ext + '"' for ext in isaaclab_extensions])
+
+    path_names.extend(['"'+ISAACLAB_EXT_DIR+'"'])
+    path_names.extend(['"'+ISAACLAB_ASSETS_DIR+'"'])
+    path_names.extend(['"'+ISAACLAB_RL_DIR+'"'])
+    path_names.extend(['"'+ISAACLAB_TASKS_DIR+'"'])
+    path_names.extend(['"'+ISAACLAB_MIMIC_DIR+'"'])
 
     # combine them into a single string
     path_names = ",\n\t\t".expandtabs(4).join(path_names)
@@ -145,6 +165,7 @@ def overwrite_default_python_interpreter(isaaclab_settings: str) -> str:
     """
     # read executable name
     python_exe = os.path.normpath(sys.executable)
+    python_exe = python_exe.replace("\\", "/")
 
     # replace with Isaac Sim's python.sh or python.bat scripts to make sure python with correct
     # source paths is set as default
@@ -195,7 +216,7 @@ def main():
     isaaclab_settings = header_message + isaaclab_settings
 
     # write the Isaac Lab settings file
-    isaaclab_vscode_filename = os.path.join(PROJECT_DIR, ".vscode", "settings.json")
+    isaaclab_vscode_filename = os.path.join(PROJECT_DIR, ".vscode", "settings2.json")
     with open(isaaclab_vscode_filename, "w") as f:
         f.write(isaaclab_settings)
 

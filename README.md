@@ -35,3 +35,10 @@ Fourth training:
 ```
 python scripts/rsl_rl/train.py --task=bhr8_fc2_noarm_rough_random_mirror --headless --num_envs=4096 --max_iterations=6000 --resume
 ```
+
+### vscode settings:
+```
+ctrl + shift + p
+tasks: run task
+setup_python_env
+```
