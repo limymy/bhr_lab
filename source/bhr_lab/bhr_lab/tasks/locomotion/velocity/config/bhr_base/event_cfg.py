@@ -21,12 +21,16 @@ class BaseEventCfg(EventCfg):
             "yaw": (-0.0, 0.0),
         }
         self.reset_robot_joints.params["position_range"] = (1.0, 1.0)
+        if hasattr(self, "base_com") and self.base_com is not None:
+            self.base_com.params["com_range"] = {"x": (-0.0, 0.0), "y": (-0.0, 0.0), "z": (-0.0, 0.0)}
 
     def reset_base_name(self, base_name: str):
         if self.add_base_mass is not None:
             self.add_base_mass.params["asset_cfg"].body_names = [base_name]
         if self.base_external_force_torque is not None:
             self.base_external_force_torque.params["asset_cfg"].body_names = [base_name]
+        if hasattr(self, "base_com") and self.base_com is not None:
+            self.base_com.params["asset_cfg"].body_names = [base_name]
 
 @configclass
 class RandomizationEventCfg(EventCfg):
@@ -65,4 +69,6 @@ class RandomizationEventCfg(EventCfg):
         if self.add_base_mass is not None:
             self.add_base_mass.params["asset_cfg"].body_names = [base_name]
         if self.base_external_force_torque is not None:
-            self.base_external_force_torque.params["asset_cfg"].body_names = [base_name]            
+            self.base_external_force_torque.params["asset_cfg"].body_names = [base_name]     
+        if hasattr(self, "base_com") and self.base_com is not None:
+            self.base_com.params["asset_cfg"].body_names = [base_name]       

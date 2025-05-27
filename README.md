@@ -42,3 +42,11 @@ ctrl + shift + p
 tasks: run task
 setup_python_env
 ```
+### Troubleshooting
+#### 2025-05-27
+- Issue: After updating to the latest version of Isaac Lab: 
+  - the system prompts missing numba package. Solution: Install numba using pip
+    ```bash
+    pip install numba
+    ```
+  - new base_com randmize will cause body name errors (this has been solved)
