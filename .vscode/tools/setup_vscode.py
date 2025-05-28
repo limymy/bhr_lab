@@ -67,10 +67,7 @@ if hasattr(isaaclab, "ISAACLAB_EXT_DIR"):
 else:
     # IsaacLab installed by pip
     from isaaclab.source.isaaclab.isaaclab import ISAACLAB_EXT_DIR
-ISAACLAB_ASSETS_DIR = ISAACLAB_EXT_DIR + "_assets"
-ISAACLAB_RL_DIR     = ISAACLAB_EXT_DIR + "_rl"    
-ISAACLAB_TASKS_DIR  = ISAACLAB_EXT_DIR + "_tasks" 
-ISAACLAB_MIMIC_DIR  = ISAACLAB_EXT_DIR + "_mimic" 
+ISAACLAB_SOURCE_DIR = pathlib.Path(ISAACLAB_EXT_DIR).parent
 
 def overwrite_python_analysis_extra_paths(isaaclab_settings: str) -> str:
     """Overwrite the python.analysis.extraPaths in the Isaac Lab settings file.
@@ -125,14 +122,10 @@ def overwrite_python_analysis_extra_paths(isaaclab_settings: str) -> str:
         )
 
     # add the path names that are in the Isaac Lab extensions directory
-    isaaclab_extensions = os.listdir(os.path.join(PROJECT_DIR, "source"))
-    path_names.extend(['"${workspaceFolder}/source/' + ext + '"' for ext in isaaclab_extensions])
-
-    path_names.extend(['"'+ISAACLAB_EXT_DIR+'"'])
-    path_names.extend(['"'+ISAACLAB_ASSETS_DIR+'"'])
-    path_names.extend(['"'+ISAACLAB_RL_DIR+'"'])
-    path_names.extend(['"'+ISAACLAB_TASKS_DIR+'"'])
-    path_names.extend(['"'+ISAACLAB_MIMIC_DIR+'"'])
+    bhr_lab_extensions = os.listdir(os.path.join(PROJECT_DIR, "source"))
+    path_names.extend([f'"{PROJECT_DIR}/source/' + ext + '"' for ext in bhr_lab_extensions])
+    isaaclab_extensions = os.listdir(ISAACLAB_SOURCE_DIR)
+    path_names.extend([f'"{ISAACLAB_SOURCE_DIR}/' + ext + '"' for ext in isaaclab_extensions])
 
     # combine them into a single string
     path_names = ",\n\t\t".expandtabs(4).join(path_names)
