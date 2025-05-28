@@ -42,7 +42,21 @@ ctrl + shift + p
 tasks: run task
 setup_python_env
 ```
+
+### Create Lite Lab
+To create a lightweight version of BHR Lab with essential files only:
+```bash
+python scripts/create_lite_lab.py --path /absolute/path/to/target --name project_name
+```
+
+This script will:
+1. Create necessary directories (.vscode, scripts/rsl_rl, envs)
+2. Copy VSCode settings
+3. Copy task initialization files
+4. Copy and modify training scripts with correct import paths
+
 ### Troubleshooting
+
 #### 2025-05-27
 - Issue: After updating to the latest version of Isaac Lab: 
   - the system prompts missing numba package. Solution: Install numba using pip
