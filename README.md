@@ -58,9 +58,24 @@ This script will:
 ### Troubleshooting
 
 #### 2025-05-27
-- Issue: After updating to the latest version of Isaac Lab: 
-  - the system prompts missing numba package. Solution: Install numba using pip
-    ```bash
-    pip install numba
-    ```
-  - new base_com randmize will cause body name errors (this has been solved)
+- **Issue**: After updating to the latest version of Isaac Lab, the system prompts missing numba package
+- **Solution**: Install numba using pip
+```bash
+pip install numba
+```
+
+#### 2025-06-07
+- **Issue**: IsaacLab API breaking change - `quat_rotate_inverse` deprecated (Issue #2129)
+- **Problem**: 
+  - IsaacLab #2129 changed `quat_rotate_inverse` to `quat_apply_inverse`
+  - This causes dimension errors in `lateral_distance` reward function
+  - Old code produces warnings and potential calculation errors
+- **Root Cause**: API function name and signature changes in latest IsaacLab versions
+- **Solution**:
+  1. Update IsaacLab to the latest version
+  2. Replace `quat_rotate_inverse` with `quat_apply_inverse` in reward functions
+  3. Verify dimension compatibility in affected reward calculations
+- **Files Affected**: 
+  - Reward functions using quaternion rotations
+  - Specifically `lateral_distance` reward computation
+- **Note**: Older IsaacLab versions may not have `quat_apply_inverse` function, update is required

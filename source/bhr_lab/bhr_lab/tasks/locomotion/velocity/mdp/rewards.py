@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import ContactSensor
 from isaaclab.assets import Articulation, RigidObject
-from isaaclab.utils.math import quat_rotate_inverse, yaw_quat
+from isaaclab.utils.math import quat_apply_inverse, yaw_quat
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
@@ -211,7 +211,10 @@ def lateral_distance(
     root_pos = asset.data.root_pos_w
     root_quat = asset.data.root_quat_w
     asset_pos_world = asset.data.body_pos_w[:, asset_cfg.body_ids, :]
-    asset_pos_body = quat_rotate_inverse(yaw_quat(root_quat.unsqueeze(1)), asset_pos_world - root_pos.unsqueeze(1))
+    # asset_pos_body = quat_rotate_inverse(yaw_quat(root_quat.unsqueeze(1)), asset_pos_world - root_pos.unsqueeze(1))
+    yaw_quat_only = yaw_quat(root_quat)
+    yaw_quat_expanded = yaw_quat_only.unsqueeze(1).expand(-1, asset_pos_world.shape[1], -1)
+    asset_pos_body = quat_apply_inverse(yaw_quat_expanded, asset_pos_world - root_pos.unsqueeze(1))
     asset_dist = torch.abs(asset_pos_body[:, 0, 1] - asset_pos_body[:, 1, 1]).unsqueeze(1)
 
     dist = torch.where(
