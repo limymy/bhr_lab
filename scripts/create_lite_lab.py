@@ -258,7 +258,7 @@ gym.register(
     print(f"Created file: {init_file}")
 
 
-def copy_and_modify_scripts(target_base_path, target_absolute_path):
+def copy_and_modify_scripts(target_base_path):
     """
     Copy and modify training scripts with correct import paths.
     
@@ -267,7 +267,6 @@ def copy_and_modify_scripts(target_base_path, target_absolute_path):
     
     Args:
         target_base_path (str): Base path for the target project
-        target_absolute_path (str): Absolute path to the target project
     """
     script_files = ["cli_args.py", "train.py", "play.py"]
     source_dir = "scripts/rsl_rl"
@@ -286,12 +285,38 @@ def copy_and_modify_scripts(target_base_path, target_absolute_path):
                     
                     # Replace the import statement with new path
                     # Convert Windows paths to Unix-style for cross-platform compatibility
-                    target_absolute_path_unix = target_absolute_path.replace('\\', '/')
                     old_import = "import bhr_lab.tasks  # noqa: F401"
-                    new_import = f"import sys\nsys.path.append('{target_absolute_path_unix}')"
-                    new_import += "\nimport envs  # Import local environment configurations"
+                    new_import = "\nimport envs  # Import local environment configurations"
 
                     modified_content = content.replace(old_import, new_import)
+                    
+                    with open(target_file, 'w', encoding='utf-8') as f:
+                        f.write(modified_content)
+                    
+                    print(f"Copied and modified file: {source_file} -> {target_file}")
+                    
+                except Exception as e:
+                    print(f"Error processing {script_file}: {e}")
+                    
+            elif script_file == "cli_args.py":
+                # Special handling for cli_args.py - add PROJECT_ROOT before TYPE_CHECKING
+                try:
+                    with open(source_file, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    
+                    # Find the position of "if TYPE_CHECKING:" and insert PROJECT_ROOT code before it
+                    type_checking_line = "if TYPE_CHECKING:"
+                    if type_checking_line in content:
+                        # Add PROJECT_ROOT setup before TYPE_CHECKING
+                        project_root_code = "import os\nimport sys\n\nPROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))\nsys.path.append(PROJECT_ROOT)\n\n"
+                        modified_content = content.replace(
+                            type_checking_line,
+                            project_root_code + type_checking_line
+                        )
+                    else:
+                        # Fallback: if TYPE_CHECKING not found, just copy the file
+                        modified_content = content
+                        print(f"Warning: 'if TYPE_CHECKING:' not found in {script_file}, copying without modification")
                     
                     with open(target_file, 'w', encoding='utf-8') as f:
                         f.write(modified_content)
@@ -429,7 +454,7 @@ Examples:
         create_example_env_files(target_base_path)
         
         # Copy and modify scripts
-        copy_and_modify_scripts(target_base_path, target_absolute_path)
+        copy_and_modify_scripts(target_base_path)
         
         # Create README
         create_readme(target_base_path)
