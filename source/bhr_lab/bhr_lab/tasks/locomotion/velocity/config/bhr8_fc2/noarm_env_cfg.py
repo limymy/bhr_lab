@@ -79,7 +79,8 @@ class Bhr8Fc2NoArmRoughEnvCfg(BaseRoughEnvCfg):
         self.events.reset_base_name("torso")
 
         # actions
-        self.actions.joint_pos.clip = {".*":(-10.0, 10.0)}
+        if getattr(self.actions, "joint_pos", None) is not None:
+            self.actions.joint_pos.clip = {".*":(-10.0, 10.0)}
         
         # change terrain to little rough
         if self.scene.terrain.terrain_generator is not None:
@@ -94,10 +95,11 @@ class Bhr8Fc2NoArmRoughEnvCfg(BaseRoughEnvCfg):
         self.terminations.base_contact.params["sensor_cfg"].body_names = ["torso", ".*shoulder.*", ".*hip.*", ".*arm", ".*thigh"]
 
         # commands
-        self.commands.base_velocity.heading_command = False
-        self.commands.base_velocity.ranges.lin_vel_x = (-1.5, 1.5)
-        self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
-        self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
+        if getattr(self.commands, "base_velocity", None) is not None:
+            self.commands.base_velocity.heading_command = False
+            self.commands.base_velocity.ranges.lin_vel_x = (-1.5, 1.5)
+            self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
+            self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
 
 @configclass
 class Bhr8Fc2NoArmFlatEnvCfg(Bhr8Fc2NoArmRoughEnvCfg):
