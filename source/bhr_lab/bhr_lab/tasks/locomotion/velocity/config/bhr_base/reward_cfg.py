@@ -135,7 +135,7 @@ class BaseRewardsCfg:
         weight=-0.5,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=[".*foot"]), 
-            "min_dist": 0.30, 
+            "min_dist": 0.20, 
             "max_dist": 0.40},
     )
     distance_knee = RewTerm(
