@@ -184,11 +184,12 @@ def joint_coordination(
     reward = torch.max(angle, dim=1).values
     return reward
 
-def lateral_distance(
+def distance_in_root(
     env: ManagerBasedRLEnv, 
     asset_cfg: SceneEntityCfg, 
     min_dist: float, 
     max_dist: float, 
+    axis_index: int = 1,
     constant_reward: float = 0.1
 ) -> torch.Tensor:
     """Penalize inappropriate lateral distance between feet.
@@ -201,6 +202,7 @@ def lateral_distance(
         asset_cfg: Configuration for the robot
         min_dist: Minimum allowed distance between feet
         max_dist: Maximum allowed distance between feet
+        axis_index: Index of the axis to measure distance (default is 1 for lateral distance)
         constant_reward: Reward value when within distance bounds
         
     Returns:
@@ -215,7 +217,7 @@ def lateral_distance(
     yaw_quat_only = yaw_quat(root_quat)
     yaw_quat_expanded = yaw_quat_only.unsqueeze(1).expand(-1, asset_pos_world.shape[1], -1)
     asset_pos_body = quat_apply_inverse(yaw_quat_expanded, asset_pos_world - root_pos.unsqueeze(1))
-    asset_dist = torch.abs(asset_pos_body[:, 0, 1] - asset_pos_body[:, 1, 1]).unsqueeze(1)
+    asset_dist = torch.abs(asset_pos_body[:, 0, axis_index] - asset_pos_body[:, 1, axis_index]).unsqueeze(1)
 
     dist = torch.where(
         asset_dist < min_dist, 
@@ -228,6 +230,24 @@ def lateral_distance(
     )
     reward = torch.min(dist, dim=1).values
     return reward
+
+def lateral_distance(
+    env: ManagerBasedRLEnv, 
+    asset_cfg: SceneEntityCfg, 
+    min_dist: float, 
+    max_dist: float, 
+    constant_reward: float = 0.1
+) -> torch.Tensor:
+    return distance_in_root(env, asset_cfg, min_dist, max_dist, axis_index=1, constant_reward=constant_reward)
+
+def longitudinal_distance(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg,
+    min_dist: float,
+    max_dist: float,
+    constant_reward: float = 0.1
+) -> torch.Tensor:
+    return distance_in_root(env, asset_cfg, min_dist, max_dist, axis_index=0, constant_reward=constant_reward)
 
 def double_feet_in_air_cmd(
     env: ManagerBasedRLEnv, 
