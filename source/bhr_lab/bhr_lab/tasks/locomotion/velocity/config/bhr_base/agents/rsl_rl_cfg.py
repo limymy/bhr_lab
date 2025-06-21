@@ -44,7 +44,7 @@ class BasePPORunnerCfg(RslRlOnPolicyRunnerCfg):
 
 @configclass
 class RecurrentPPORunnerCfg(BasePPORunnerCfg):
-    policy = RslRlPpoActorCriticRecurrentCfg(
+    policy: RslRlPpoActorCriticRecurrentCfg = RslRlPpoActorCriticRecurrentCfg(
         init_noise_std=1.0,
         actor_hidden_dims=[256, 128],
         critic_hidden_dims=[256, 128],
