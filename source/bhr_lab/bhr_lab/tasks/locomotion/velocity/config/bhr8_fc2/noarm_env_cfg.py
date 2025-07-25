@@ -5,6 +5,18 @@ from bhr_lab.tasks.locomotion.velocity.config.bhr_base.event_cfg import Randomiz
 
 from bhr_lab.assets.bhr8_fc2 import BHR8_FC2_NOARM_CFG, DEG2RAD
 from .noarm_mirror_cfg import Bhr8Fc2NoArmMirrorCfg
+
+import isaaclab.sim as sim_utils
+from isaaclab.terrains import TerrainImporterCfg
+from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
+from isaaclab.sensors import CameraCfg, ImuCfg, ContactSensorCfg
+from bhr_lab.tasks.locomotion.velocity.config.bhr_base.recorder import RGBFrameRecorderCfg
+
+from isaaclab.managers.recorder_manager import (
+    RecorderManagerBaseCfg,     # Recorder 管理器配置
+    DatasetExportMode,          # 选择导出模式
+)
+
 @configclass
 class Bhr8Fc2NoArmRewards(BaseRewardsCfg):
     '''Rewards for the BHR8 FC2 no arm environment'''
@@ -145,3 +157,75 @@ class Bhr8Fc2NoArmFlatRandomEnvCfg(Bhr8Fc2NoArmFlatEnvCfg):
 
     def __post_init__(self):
         super().__post_init__()
+
+@configclass
+class Bhr8Fc2NoArmWarehouseEnvCfg(Bhr8Fc2NoArmRoughEnvCfg):
+    '''Configuration for the BHR8 FC2 no arm environment with warehouse'''
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        self.decimation = 20
+        self.sim.dt = 0.001
+        self.sim.render_interval = self.decimation
+        if self.scene.height_scanner is not None:
+            self.scene.height_scanner.update_period = self.decimation * self.sim.dt
+        if self.scene.contact_forces is not None:
+            self.scene.contact_forces.update_period = self.sim.dt
+
+        # change terrain to flat and remove terrain curriculum
+        self.scene.terrain = TerrainImporterCfg(
+            prim_path="/World/ground",
+            terrain_type="usd",
+            usd_path=f"{ISAAC_NUCLEUS_DIR}/Environments/Simple_Warehouse/warehouse.usd",
+        )
+        self.scene.terrain.terrain_generator = None
+        self.curriculum.terrain_levels = None
+
+        self.scene.cam_left = CameraCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/torso/cam_left",
+            update_period=0.05,
+            height=480,
+            width=640,
+            data_types=["rgb"],
+            spawn=sim_utils.PinholeCameraCfg(
+                focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 1.0e5)
+            ),
+            offset=CameraCfg.OffsetCfg(pos=(0.0, 0.05, 0.0), convention="world"),
+        )
+
+        self.scene.cam_right = CameraCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/torso/cam_right",
+            update_period=0.05,
+            height=1080,
+            width=1920,
+            data_types=["rgb"],
+            spawn=sim_utils.PinholeCameraCfg(
+                focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 1.0e5)
+            ),
+            offset=CameraCfg.OffsetCfg(pos=(0.0, -0.05, 0.0), convention="world"),
+        )
+
+        self.scene.imu = ImuCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/torso",
+            update_period=0.005,
+        )
+
+        self.scene.contact_force_lfoot = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/lfoot",
+            update_period=0.005,
+        )
+
+        self.scene.contact_force_rfoot = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/rfoot",
+            update_period=0.005,
+        )
+
+        self.recorders = RecorderManagerBaseCfg(
+            dataset_export_dir_path="./logs",       # 数据导出目录
+            dataset_filename="bot_dataset",      # 不含扩展名
+            dataset_export_mode=DatasetExportMode.EXPORT_ALL,
+            export_in_record_pre_reset=True
+        )
+
+        self.recorders.cam = RGBFrameRecorderCfg(cam_name="cam_left")

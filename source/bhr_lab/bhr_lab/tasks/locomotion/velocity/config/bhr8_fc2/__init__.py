@@ -6,6 +6,7 @@ from .noarm_env_cfg import (
     Bhr8Fc2NoArmFlatRandomEnvCfg,
     Bhr8Fc2NoArmRoughEnvCfg,
     Bhr8Fc2NoArmRoughRandomEnvCfg,
+    Bhr8Fc2NoArmWarehouseEnvCfg,
 )
 from .agents.rsl_rl_cfg import (
     Bhr8Fc2BasePPORunnerCfg,
@@ -94,5 +95,15 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": Bhr8Fc2NoArmRoughRandomEnvCfg,
         "rsl_rl_cfg_entry_point": Bhr8Fc2BasePPORunnerCfg,
+    },
+)
+
+gym.register(
+    id="bhr8_fc2_noarm_warehouse_mirror",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": Bhr8Fc2NoArmWarehouseEnvCfg,
+        "rsl_rl_cfg_entry_point": Bhr8Fc2NoArmMirrorPPORunnerCfg,
     },
 )
