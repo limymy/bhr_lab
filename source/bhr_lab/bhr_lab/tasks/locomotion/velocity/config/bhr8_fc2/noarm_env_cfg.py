@@ -10,7 +10,12 @@ import isaaclab.sim as sim_utils
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 from isaaclab.sensors import CameraCfg, ImuCfg, ContactSensorCfg
-from bhr_lab.tasks.locomotion.velocity.config.bhr_base.recorder import RGBFrameRecorderCfg
+from bhr_lab.tasks.locomotion.velocity.config.bhr_base.recorder import (
+    JointStateRecorderCfg,
+    CameraRecorderCfg,
+    ImuRecorderCfg,
+    ContactRecorderCfg
+)
 
 from isaaclab.managers.recorder_manager import (
     RecorderManagerBaseCfg,     # Recorder 管理器配置
@@ -165,8 +170,8 @@ class Bhr8Fc2NoArmWarehouseEnvCfg(Bhr8Fc2NoArmRoughEnvCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        self.decimation = 20
-        self.sim.dt = 0.001
+        self.decimation = 4
+        self.sim.dt = 0.005
         self.sim.render_interval = self.decimation
         if self.scene.height_scanner is not None:
             self.scene.height_scanner.update_period = self.decimation * self.sim.dt
@@ -214,18 +219,25 @@ class Bhr8Fc2NoArmWarehouseEnvCfg(Bhr8Fc2NoArmRoughEnvCfg):
         self.scene.contact_force_lfoot = ContactSensorCfg(
             prim_path="{ENV_REGEX_NS}/Robot/lfoot",
             update_period=0.005,
+            track_pose = True,
         )
 
         self.scene.contact_force_rfoot = ContactSensorCfg(
             prim_path="{ENV_REGEX_NS}/Robot/rfoot",
             update_period=0.005,
+            track_pose = True,
         )
 
         self.recorders = RecorderManagerBaseCfg(
             dataset_export_dir_path="./logs",       # 数据导出目录
             dataset_filename="bot_dataset",      # 不含扩展名
             dataset_export_mode=DatasetExportMode.EXPORT_ALL,
-            export_in_record_pre_reset=True
+            export_in_record_pre_reset=True,
         )
 
-        self.recorders.cam = RGBFrameRecorderCfg(cam_name="cam_left")
+        self.recorders.joint_state = JointStateRecorderCfg()
+        self.recorders.imu = ImuRecorderCfg(imu_name="imu")
+        self.recorders.contact_force_lfoot = ContactRecorderCfg(contact_sensor_name="contact_force_lfoot")
+        self.recorders.contact_force_rfoot = ContactRecorderCfg(contact_sensor_name="contact_force_rfoot")
+        self.recorders.cam_left = CameraRecorderCfg(cam_name="cam_left")
+        self.recorders.cam_right = CameraRecorderCfg(cam_name="cam_right")
