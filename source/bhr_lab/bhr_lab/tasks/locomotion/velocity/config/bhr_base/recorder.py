@@ -49,9 +49,9 @@ class JointStateRecorder(MyRecorderTerm):
     def record_post_physics_step(self) -> tuple[str, dict[str, torch.Tensor]]:
         self.update_timestamp()
         data_dict = {
-            "timestamp": self._timestamp.clone(),
-            "joint_pos": self._robot.data.joint_pos.clone(),
-            "joint_vel": self._robot.data.joint_vel.clone(),
+            "timestamp": self._timestamp.clone().cpu(),
+            "joint_pos": self._robot.data.joint_pos.clone().cpu(),
+            "joint_vel": self._robot.data.joint_vel.clone().cpu(),
         }
         return "joint_state", data_dict
 
@@ -92,10 +92,10 @@ class ImuRecorder(MyRecorderTerm):
             self._next_update_time += self._imu_dt
         
         data_dict = {
-            "timestamp": self._timestamp.clone(),
-            "quat": self._imu.data.quat_w.clone(),
-            "ang_vel": self._imu.data.ang_vel_b.clone(),
-            "lin_acc": self._imu.data.lin_acc_b.clone(),
+            "timestamp": self._timestamp.clone().cpu(),
+            "quat": self._imu.data.quat_w.clone().cpu(),
+            "ang_vel": self._imu.data.ang_vel_b.clone().cpu(),
+            "lin_acc": self._imu.data.lin_acc_b.clone().cpu(),
         }
         return self._imu_name, data_dict                          # (key, value)
 
@@ -152,8 +152,8 @@ class ContactRecorder(MyRecorderTerm):
         net_forces_w = self._contact_sensor.data.net_forces_w.clone()
         forces_body = quat_apply_inverse(quat_w, net_forces_w)
         data_dict = {
-            "timestamp": self._timestamp.clone(),
-            "forces": forces_body,
+            "timestamp": self._timestamp.clone().cpu(),
+            "forces": forces_body.cpu(),
         }
         return self._contact_sensor_name, data_dict
     
@@ -194,9 +194,9 @@ class CameraRecorder(MyRecorderTerm):
         
         self._frame_id = frame_id
         data_dict = {
-            "timestamp": self._timestamp.clone(),
-            "frame_id": self._frame_id.clone(),
-            "rgb": data.output["rgb"].clone(),
+            "timestamp": self._timestamp.clone().cpu(),
+            "frame_id": self._frame_id.clone().cpu(),
+            "rgb": data.output["rgb"].clone().cpu(),
         }
         return self._cam_name, data_dict
 

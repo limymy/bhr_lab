@@ -29,6 +29,16 @@ parser.add_argument(
     help="Use the pre-trained checkpoint from Nucleus.",
 )
 parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
+# isaac sim Simulation Application args
+# doc: https://docs.omniverse.nvidia.com/py/isaacsim/source/extensions/omni.isaac.kit/docs/index.html
+parser.add_argument("--active_gpu", type=int, default=None,
+                    help="Specify the GPU to use when running, set to None to use default value which is usually the first gpu, default is None.")
+parser.add_argument("--physics_gpu", type=int, default=0,
+                    help="Specify the GPU to use when running physics simulation. Defaults to 0 (first GPU).")
+parser.add_argument("--multi_gpu", type=bool, default=True, 
+                    help="Set to true to enable Multi GPU support, Defaults to true.")
+parser.add_argument("--max_gpu_count", type=int, default=None,
+                    help="Maximum number of GPUs to use, Defaults to None which will use all available.")
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -75,7 +85,7 @@ def main():
     )
     agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
 
-    env_cfg.episode_length_s = 600
+    env_cfg.episode_length_s = 12
     env_cfg.sim.render = sim_utils.RenderCfg(
         rendering_mode="quality",
     )
@@ -146,9 +156,6 @@ def main():
 
     # reset environment
     obs, _ = env.get_observations()
-    imu = env.unwrapped.scene.sensors["imu"]
-    force_lfoot = env.unwrapped.scene.sensors["contact_force_lfoot"]
-    force_rfoot = env.unwrapped.scene.sensors["contact_force_rfoot"]
     timestep = 0
     # simulate environment
     while simulation_app.is_running():
@@ -161,9 +168,6 @@ def main():
             # env stepping
             obs, _, _, _ = env.step(actions)
             print(f"sim_time: {sim_time}")
-            # print(imu.data)
-            # print(force_lfoot.data)
-            # print(force_rfoot.data)
         if args_cli.video:
             timestep += 1
             # Exit the play loop after recording one video

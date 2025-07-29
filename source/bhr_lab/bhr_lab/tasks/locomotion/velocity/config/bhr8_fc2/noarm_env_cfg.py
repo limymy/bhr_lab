@@ -190,8 +190,8 @@ class Bhr8Fc2NoArmWarehouseEnvCfg(Bhr8Fc2NoArmRoughEnvCfg):
         self.scene.cam_left = CameraCfg(
             prim_path="{ENV_REGEX_NS}/Robot/torso/cam_left",
             update_period=0.05,
-            height=480,
-            width=640,
+            height=1080,
+            width=1920,
             data_types=["rgb"],
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 1.0e5)

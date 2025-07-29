@@ -22,23 +22,70 @@ data -> demo_* -> recorder_name -> dataset_key
 """
 
 import argparse
+import functools
 import h5py
 import logging
 import os
+import shutil
+from multiprocessing import Pool
+
+import numpy as np
 import pandas as pd
 from PIL import Image
-import numpy as np
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
-def export_camera_data(recorder_group: h5py.Group, output_dir: str):
-    """Exports camera data from a recorder group to a directory of PNG images.
+def _save_frame_batch(h5_path: str, recorder_path: str, frame_indices: list, frame_ids: list, output_dir: str, compress_level: int):
+    """Helper function to save a batch of image frames.
+    Args:
+        h5_path (str): Path to the HDF5 file.
+        recorder_path (str): Path to the recorder group within the HDF5 file.
+        frame_indices (list): List of frame indices to process.
+        frame_ids (list): List of frame IDs corresponding to the frame indices.
+        output_dir (str): The directory to save the PNG files.
+        compress_level (int): The compression level for the PNG images.
+    """
+    try:
+        with h5py.File(h5_path, "r") as f:
+            recorder_group = f[recorder_path]
+            if not isinstance(recorder_group, h5py.Group):
+                logging.error(f"    {recorder_path} is not a valid group")
+                return
+            
+            rgb_data = recorder_group["rgb"]
+            if not isinstance(rgb_data, h5py.Dataset):
+                logging.error(f"    rgb data in {recorder_path} is not a valid dataset")
+                return
+            
+            for i, frame_index in enumerate(frame_indices):
+                try:
+                    frame_data = rgb_data[frame_index]
+                    frame_id = frame_ids[i]
+                    
+                    # Ensure frame is in uint8 format for image saving
+                    if frame_data.dtype != np.uint8:
+                        if isinstance(frame_data, np.ndarray) and np.issubdtype(frame_data.dtype, np.floating):
+                            frame_data = (frame_data * 255).astype(np.uint8)
+                        else:
+                            logging.warning(f"    Frame {frame_index} has an unsupported dtype {frame_data.dtype}, skipping conversion.")
+                            continue
+                    
+                    img = Image.fromarray(frame_data)
+                    img.save(os.path.join(output_dir, f"{frame_id}.png"), compress_level=compress_level)
+                except Exception as e:
+                    logging.error(f"    Failed to save frame {frame_index} (frame_id: {frame_ids[i] if i < len(frame_ids) else 'unknown'}): {e}")
+    except Exception as e:
+        logging.error(f"    Failed to process batch {frame_indices}: {e}")
 
+
+def export_camera_data(recorder_group: h5py.Group, output_dir: str, compress_level: int):
+    """Exports camera data from a recorder group to a directory of PNG images using multiprocessing.
     Args:
         recorder_group (h5py.Group): The HDF5 group for a specific recorder (e.g., 'cam_left').
         output_dir (str): The directory where PNG files will be saved.
+        compress_level (int): The compression level for PNG images (0-9).
     """
     if "rgb" not in recorder_group:
         logging.warning(f"  'rgb' dataset not found in {recorder_group.name}. Skipping.")
@@ -50,22 +97,80 @@ def export_camera_data(recorder_group: h5py.Group, output_dir: str):
         return
 
     os.makedirs(output_dir, exist_ok=True)
-    logging.info(f"  Saving {rgb_data.shape[0]} frames to {output_dir}...")
-
-    for i in range(rgb_data.shape[0]):
+    num_frames = rgb_data.shape[0]
+    
+    # Read timestamp and frame_id data for CSV export
+    timestamps = None
+    frame_ids = None
+    
+    if "timestamp" in recorder_group:
+        timestamp_data = recorder_group["timestamp"]
+        if isinstance(timestamp_data, h5py.Dataset):
+            timestamps = timestamp_data[:]
+            logging.info(f"  Found timestamp data with {len(timestamps)} entries")
+        else:
+            logging.warning(f"  'timestamp' in {recorder_group.name} is not a dataset")
+    
+    if "frame_id" in recorder_group:
+        frame_id_data = recorder_group["frame_id"]
+        if isinstance(frame_id_data, h5py.Dataset):
+            frame_ids = frame_id_data[:]
+            logging.info(f"  Found frame_id data with {len(frame_ids)} entries")
+        else:
+            logging.warning(f"  'frame_id' in {recorder_group.name} is not a dataset")
+    
+    # Create timestamps.csv if we have the required data
+    if timestamps is not None and frame_ids is not None:
         try:
-            frame = rgb_data[i]
-            # Ensure frame is in uint8 format for image saving
-            if frame.dtype != np.uint8:
-                if isinstance(frame, np.ndarray) and np.issubdtype(frame.dtype, np.floating):
-                    frame = (frame * 255).astype(np.uint8)
-                else:
-                    logging.warning(f"    Frame {i} has an unsupported dtype {frame.dtype}, skipping conversion.")
-                    continue
-            img = Image.fromarray(frame)
-            img.save(os.path.join(output_dir, f"frame_{i:04d}.png"))
+            # Create DataFrame and save to CSV
+            df = pd.DataFrame({
+                'timestamp': timestamps.flatten() if timestamps.ndim > 1 else timestamps,
+                'frame_id': frame_ids.flatten() if frame_ids.ndim > 1 else frame_ids
+            })
+            csv_path = os.path.join(output_dir, "timestamps.csv")
+            df.to_csv(csv_path, index=False)
+            logging.info(f"  Successfully saved timestamps.csv to {csv_path}")
         except Exception as e:
-            logging.error(f"    Failed to save frame {i} from {recorder_group.name}: {e}")
+            logging.error(f"  Failed to create timestamps.csv: {e}")
+            frame_ids = None  # Fall back to index-based naming if CSV creation fails
+    else:
+        logging.warning(f"  Missing timestamp or frame_id data in {recorder_group.name}, will use index-based naming")
+    
+    # Get the HDF5 file path and recorder path for worker processes
+    h5_path = rgb_data.file.filename
+    recorder_path = recorder_group.name
+    
+    logging.info(f"  Saving {num_frames} frames to {output_dir} using multiprocessing...")
+
+    # Calculate batch size based on number of CPU cores
+    num_processes = os.cpu_count()
+    batch_size = max(1, num_frames // num_processes)
+    
+    # Create batches of frame indices and corresponding frame_ids
+    batches = []
+    frame_id_batches = []
+    for i in range(0, num_frames, batch_size):
+        end_idx = min(i + batch_size, num_frames)
+        frame_indices = list(range(i, end_idx))
+        batches.append(frame_indices)
+        
+        if frame_ids is not None:
+            # Use actual frame IDs for naming
+            batch_frame_ids = [int(frame_ids[j]) for j in frame_indices]
+        else:
+            # Fall back to index-based naming
+            batch_frame_ids = frame_indices
+        frame_id_batches.append(batch_frame_ids)
+    
+    # Create a pool of worker processes
+    with Pool(processes=num_processes) as pool:
+        # Prepare arguments for each batch
+        batch_args = [(h5_path, recorder_path, batch_indices, batch_frame_ids, output_dir, compress_level)
+                      for batch_indices, batch_frame_ids in zip(batches, frame_id_batches)]
+        # Distribute the batches to the worker processes
+        pool.starmap(_save_frame_batch, batch_args)
+
+    logging.info(f"  Finished saving frames from {recorder_group.name}.")
 
 
 def export_other_data(recorder_group: h5py.Group, output_path: str):
@@ -121,11 +226,48 @@ def main():
     parser = argparse.ArgumentParser(description="Export recorded data from an HDF5 file.")
     parser.add_argument("h5_path", type=str, help="Path to the HDF5 file.")
     parser.add_argument(
-        "--output_dir", type=str, default="output_data", help="Directory to save the exported data."
+        "--output_dir", type=str, default=None, help="Directory to save the exported data. Defaults to '<h5_path_dir>/<h5_name>_exported'."
+    )
+    parser.add_argument(
+        "--compress_level", type=int, default=6, help="PNG compression level (0-9)."
+    )
+    parser.add_argument(
+        "--clear_output", type=str, default=None, choices=['yes', 'no'],
+        help="Clear output directory if it exists. Options: 'yes', 'no'. If not specified, will prompt user."
     )
     args = parser.parse_args()
 
-    os.makedirs(args.output_dir, exist_ok=True)
+    if args.output_dir is None:
+        h5_dir = os.path.dirname(args.h5_path)
+        h5_name = os.path.splitext(os.path.basename(args.h5_path))[0]
+        args.output_dir = os.path.join(h5_dir, f"{h5_name}_exported")
+
+    # Handle output directory clearing
+    if os.path.exists(args.output_dir) and os.listdir(args.output_dir):
+        if args.clear_output is None:
+            # Prompt user for decision
+            while True:
+                user_input = input(f"Output directory '{args.output_dir}' exists and is not empty. Clear it? (yes/no): ").lower().strip()
+                if user_input in ['yes', 'y']:
+                    clear_dir = True
+                    break
+                elif user_input in ['no', 'n']:
+                    clear_dir = False
+                    break
+                else:
+                    print("Please enter 'yes' or 'no'.")
+        else:
+            clear_dir = args.clear_output == 'yes'
+        
+        if clear_dir:
+            logging.info(f"Clearing output directory: {args.output_dir}")
+            shutil.rmtree(args.output_dir)
+            os.makedirs(args.output_dir, exist_ok=True)
+        else:
+            logging.info(f"Keeping existing content in output directory: {args.output_dir}")
+    else:
+        os.makedirs(args.output_dir, exist_ok=True)
+    
     logging.info(f"Output directory: {os.path.abspath(args.output_dir)}")
 
     try:
@@ -159,7 +301,7 @@ def main():
                     # Check if it's camera data
                     if "cam" in recorder_name.lower():
                         cam_output_dir = os.path.join(args.output_dir, demo_name, recorder_name)
-                        export_camera_data(recorder_group, cam_output_dir)
+                        export_camera_data(recorder_group, cam_output_dir, args.compress_level)
                     else:
                         # It's other sensor data, export to CSV
                         csv_filename = f"{demo_name}_{recorder_name}.csv"

@@ -34,3 +34,10 @@ _isaac_sim*
 _repo
 _build
 .lastformat
+
+# add demo net weights
+!logs/rsl_rl/
+!logs/rsl_rl/bhr8_fc2_noarm_mirror/
+!logs/rsl_rl/bhr8_fc2_noarm_mirror/demo/
+logs/rsl_rl/bhr8_fc2_noarm_mirror/demo/exported
+!logs/rsl_rl/bhr8_fc2_noarm_mirror/demo/model_demo.pt
