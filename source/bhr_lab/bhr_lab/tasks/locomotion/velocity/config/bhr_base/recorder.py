@@ -40,14 +40,31 @@ class MyRecorderTerm(RecorderTerm):
 #  关节状态 Recorder
 class JointStateRecorder(MyRecorderTerm):
     """
-    一个自定义的Recorder Term，用于记录机器人关节的位置和速度。
+    一个自定义的Recorder Term，用于记录机器人关节的位置和速度。支持自定义记录周期。
     """
-    def __init__(self, cfg: RecorderTermCfg, env):
+    def __init__(self, cfg: "JointStateRecorderCfg", env):
         super().__init__(cfg, env)
         self._robot = env.scene["robot"]
+        self._record_period = cfg.record_period if cfg.record_period is not None else self._dt
+        self._next_update_time = torch.full_like(self._timestamp, self._record_period)
 
-    def record_post_physics_step(self) -> tuple[str, dict[str, torch.Tensor]]:
+    def record_post_reset(self, env_ids: Sequence[int] | None) -> tuple[str | None, torch.Tensor | dict | None]:
+        super().record_post_reset(env_ids)
+        if env_ids is not None:
+            self._next_update_time[env_ids] = self._record_period
+        else:
+            self._next_update_time = torch.full_like(self._timestamp, self._record_period)
+        return None, None
+
+    def record_post_physics_step(self) -> tuple[str | None, dict[str, torch.Tensor] | None]:
         self.update_timestamp()
+        
+        if self._timestamp[0] < self._next_update_time[0]:
+            return None, None
+        
+        while self._timestamp[0] >= self._next_update_time[0]:
+            self._next_update_time += self._record_period
+        
         data_dict = {
             "timestamp": self._timestamp.clone().cpu(),
             "joint_pos": self._robot.data.joint_pos.clone().cpu(),
@@ -58,6 +75,8 @@ class JointStateRecorder(MyRecorderTerm):
 @configclass
 class JointStateRecorderCfg(RecorderTermCfg):
     class_type: type = JointStateRecorder
+    record_period: float | None = None
+    """记录周期，单位为秒。如果为 None，则使用环境的物理步长。默认值为 None。"""
 
 # IMU Recorder
 class ImuRecorder(MyRecorderTerm):
@@ -93,11 +112,13 @@ class ImuRecorder(MyRecorderTerm):
         
         data_dict = {
             "timestamp": self._timestamp.clone().cpu(),
+            "pos": self._imu.data.pos_w.clone().cpu(),
             "quat": self._imu.data.quat_w.clone().cpu(),
             "ang_vel": self._imu.data.ang_vel_b.clone().cpu(),
+            "lin_vel": self._imu.data.lin_vel_b.clone().cpu(),
             "lin_acc": self._imu.data.lin_acc_b.clone().cpu(),
         }
-        return self._imu_name, data_dict                          # (key, value)
+        return self._imu_name, data_dict
 
 @configclass
 class ImuRecorderCfg(RecorderTermCfg):

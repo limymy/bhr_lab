@@ -170,8 +170,8 @@ class Bhr8Fc2NoArmWarehouseEnvCfg(Bhr8Fc2NoArmRoughEnvCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        self.decimation = 4
-        self.sim.dt = 0.005
+        self.decimation = 200
+        self.sim.dt = 0.0001
         self.sim.render_interval = self.decimation
         if self.scene.height_scanner is not None:
             self.scene.height_scanner.update_period = self.decimation * self.sim.dt
@@ -213,7 +213,7 @@ class Bhr8Fc2NoArmWarehouseEnvCfg(Bhr8Fc2NoArmRoughEnvCfg):
 
         self.scene.imu = ImuCfg(
             prim_path="{ENV_REGEX_NS}/Robot/torso",
-            update_period=0.005,
+            update_period=0.0001,
         )
 
         self.scene.contact_force_lfoot = ContactSensorCfg(
@@ -235,7 +235,7 @@ class Bhr8Fc2NoArmWarehouseEnvCfg(Bhr8Fc2NoArmRoughEnvCfg):
             export_in_record_pre_reset=True,
         )
 
-        self.recorders.joint_state = JointStateRecorderCfg()
+        self.recorders.joint_state = JointStateRecorderCfg(record_period=0.001)
         self.recorders.imu = ImuRecorderCfg(imu_name="imu")
         self.recorders.contact_force_lfoot = ContactRecorderCfg(contact_sensor_name="contact_force_lfoot")
         self.recorders.contact_force_rfoot = ContactRecorderCfg(contact_sensor_name="contact_force_rfoot")
