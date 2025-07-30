@@ -496,7 +496,7 @@ def link_keep_flat(
     gravity_vec_w_expanded = gravity_vec_w.unsqueeze(1).expand(-1, link_quat_w.shape[1], -1)
     
     # Calculate inverse-rotated gravity vector (num_robots, num_bodies, 3)
-    gravity_link = quat_rotate_inverse(link_quat_w, gravity_vec_w_expanded)
+    gravity_link = quat_apply_inverse(link_quat_w, gravity_vec_w_expanded)
     
     # Calculate the square sum of horizontal components (x, y) (num_robots, num_bodies)
     reward_per_body = torch.sum(torch.square(gravity_link[:, :, :2]), dim=2)
@@ -523,7 +523,7 @@ def link_ang_vel_l2(
         Reward penalty for high angular velocity
     """
     asset: Articulation = env.scene[asset_cfg.name]
-    link_ang_vel = quat_rotate_inverse(asset.data.body_link_quat_w, asset.data.body_link_ang_vel_w)
+    link_ang_vel = quat_apply_inverse(asset.data.body_link_quat_w, asset.data.body_link_ang_vel_w)
     return torch.sum(torch.square(link_ang_vel[:, :, :2]), dim=2).max(dim=1).values
 
 def stand_still_without_cmd(
