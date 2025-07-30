@@ -2,6 +2,13 @@ from bhr_lab.tasks.locomotion.velocity.config.bhr_base.env_cfg import (
     configclass, BaseRoughEnvCfg, BaseRewardsCfg
 )
 from bhr_lab.tasks.locomotion.velocity.config.bhr_base.event_cfg import RandomizationEventCfg
+from bhr_lab.tasks.locomotion.velocity.config.bhr_base.recorder import (
+    JointStateRecorderCfg,
+    CameraRecorderCfg,
+    ImuRecorderCfg,
+    ContactRecorderCfg
+)
+from bhr_lab.tasks.locomotion.velocity.mdp.commands import DelayedUniformVelocityCommandCfg
 
 from bhr_lab.assets.bhr8_fc2 import BHR8_FC2_NOARM_CFG, DEG2RAD
 from .noarm_mirror_cfg import Bhr8Fc2NoArmMirrorCfg
@@ -10,17 +17,13 @@ import isaaclab.sim as sim_utils
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 from isaaclab.sensors import CameraCfg, ImuCfg, ContactSensorCfg
-from bhr_lab.tasks.locomotion.velocity.config.bhr_base.recorder import (
-    JointStateRecorderCfg,
-    CameraRecorderCfg,
-    ImuRecorderCfg,
-    ContactRecorderCfg
-)
-
 from isaaclab.managers.recorder_manager import (
     RecorderManagerBaseCfg,     # Recorder 管理器配置
     DatasetExportMode,          # 选择导出模式
 )
+from isaaclab.envs.mdp import UniformVelocityCommandCfg
+
+import math
 
 @configclass
 class Bhr8Fc2NoArmRewards(BaseRewardsCfg):
@@ -170,13 +173,27 @@ class Bhr8Fc2NoArmWarehouseEnvCfg(Bhr8Fc2NoArmRoughEnvCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        self.decimation = 200
-        self.sim.dt = 0.0001
+        self.decimation = 20
+        self.sim.dt = 0.001
         self.sim.render_interval = self.decimation
         if self.scene.height_scanner is not None:
             self.scene.height_scanner.update_period = self.decimation * self.sim.dt
         if self.scene.contact_forces is not None:
             self.scene.contact_forces.update_period = self.sim.dt
+
+        self.commands.base_velocity = DelayedUniformVelocityCommandCfg(
+            asset_name="robot",
+            resampling_time_range=(10.0, 10.0),
+            rel_standing_envs=0.02,
+            rel_heading_envs=1.0,
+            heading_command=True,
+            heading_control_stiffness=0.5,
+            debug_vis=True,
+            ranges=UniformVelocityCommandCfg.Ranges(
+                lin_vel_x=(-1.0, 1.0), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-1.0, 1.0), heading=(-math.pi, math.pi)
+            ),
+            delay_time=1.0,
+        )
 
         # change terrain to flat and remove terrain curriculum
         self.scene.terrain = TerrainImporterCfg(
@@ -213,7 +230,7 @@ class Bhr8Fc2NoArmWarehouseEnvCfg(Bhr8Fc2NoArmRoughEnvCfg):
 
         self.scene.imu = ImuCfg(
             prim_path="{ENV_REGEX_NS}/Robot/torso",
-            update_period=0.0001,
+            update_period=0.001,
         )
 
         self.scene.contact_force_lfoot = ContactSensorCfg(
