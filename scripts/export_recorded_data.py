@@ -290,6 +290,11 @@ def main():
                     continue
                 logging.info(f"Processing demo: '{demo_name}'")
 
+                # Create a dedicated output directory for this demo
+                demo_output_dir = os.path.join(args.output_dir, demo_name)
+                os.makedirs(demo_output_dir, exist_ok=True)
+                logging.info(f"  Output directory for this demo: {demo_output_dir}")
+
                 # Iterate over each recorder in the demo (e.g., 'joint_state', 'cam_left')
                 for recorder_name in demo_group.keys():
                     recorder_group = demo_group.get(recorder_name)
@@ -300,12 +305,12 @@ def main():
 
                     # Check if it's camera data
                     if "cam" in recorder_name.lower():
-                        cam_output_dir = os.path.join(args.output_dir, demo_name, recorder_name)
+                        cam_output_dir = os.path.join(demo_output_dir, recorder_name)
                         export_camera_data(recorder_group, cam_output_dir, args.compress_level)
                     else:
                         # It's other sensor data, export to CSV
-                        csv_filename = f"{demo_name}_{recorder_name}.csv"
-                        csv_output_path = os.path.join(args.output_dir, csv_filename)
+                        csv_filename = f"{recorder_name}.csv"
+                        csv_output_path = os.path.join(demo_output_dir, csv_filename)
                         export_other_data(recorder_group, csv_output_path)
 
     except FileNotFoundError:

@@ -65,10 +65,15 @@ class JointStateRecorder(MyRecorderTerm):
         while self._timestamp[0] >= self._next_update_time[0]:
             self._next_update_time += self._record_period
         
+        joint_names = self._robot.joint_names
+        
+        joint_pos_dict = {name+"_pos": pos.cpu() for name, pos in zip(joint_names, self._robot.data.joint_pos.T)}
+        joint_vel_dict = {name+"_vel": vel.cpu() for name, vel in zip(joint_names, self._robot.data.joint_vel.T)}
+
         data_dict = {
             "timestamp": self._timestamp.clone().cpu(),
-            "joint_pos": self._robot.data.joint_pos.clone().cpu(),
-            "joint_vel": self._robot.data.joint_vel.clone().cpu(),
+            **joint_pos_dict,
+            **joint_vel_dict,
         }
         return "joint_state", data_dict
 

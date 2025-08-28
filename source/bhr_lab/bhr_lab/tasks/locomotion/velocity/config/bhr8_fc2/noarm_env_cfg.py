@@ -192,7 +192,7 @@ class Bhr8Fc2NoArmWarehouseEnvCfg(Bhr8Fc2NoArmRoughEnvCfg):
             ranges=UniformVelocityCommandCfg.Ranges(
                 lin_vel_x=(-1.0, 1.0), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-1.0, 1.0), heading=(-math.pi, math.pi)
             ),
-            delay_time=1.0,
+            delay_time=1.5,
         )
 
         # change terrain to flat and remove terrain curriculum
@@ -246,8 +246,8 @@ class Bhr8Fc2NoArmWarehouseEnvCfg(Bhr8Fc2NoArmRoughEnvCfg):
         )
 
         self.recorders = RecorderManagerBaseCfg(
-            dataset_export_dir_path="./logs",       # 数据导出目录
-            dataset_filename="bot_dataset",      # 不含扩展名
+            dataset_export_dir_path="./logs/recorded",
+            dataset_filename=datetime.datetime.now().strftime("%Y%m%d_%H-%M-%S"),
             dataset_export_mode=DatasetExportMode.EXPORT_ALL,
             export_in_record_pre_reset=True,
         )

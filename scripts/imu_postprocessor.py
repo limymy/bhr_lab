@@ -213,15 +213,16 @@ class IMUAccelerationPostProcessor:
         return imu_acceleration
     
     def decimate_data(self, data: np.ndarray, timestamps: np.ndarray,
-                     original_freq: float, target_freq: float) -> tuple:
+                     original_freq: float, target_freq: float, apply_filter: bool = True) -> tuple:
         """
         将数据降采样到目标频率
         
         Args:
-            data: 要降采样的数据 (N, 3)
+            data: 要降采样的数据 (N, D) - D为数据维度
             timestamps: 时间戳 (N,)
             original_freq: 原始采样频率
             target_freq: 目标采样频率
+            apply_filter: 是否应用滤波器（仅对加速度数据应用滤波）
             
         Returns:
             tuple: (降采样后的数据, 降采样后的时间戳)
@@ -235,19 +236,24 @@ class IMUAccelerationPostProcessor:
         
         print(f"降采样: {original_freq:.1f} Hz -> {actual_target_freq:.1f} Hz (因子: {decimation_factor})")
         
-        # 设计抗混叠滤波器
-        nyquist_freq = target_freq / 2
-        cutoff_freq = nyquist_freq * self.cutoff_freq_ratio
-        
-        print(f"抗混叠滤波器: 截止频率 = {cutoff_freq:.1f} Hz")
-        
-        # 设计Butterworth低通滤波器
-        b, a = butter(self.butter_order, cutoff_freq, fs=original_freq, btype='low')
-        
-        # 应用零相位滤波器
-        data_filtered = np.zeros_like(data)
-        for axis in range(3):
-            data_filtered[:, axis] = filtfilt(b, a, data[:, axis])
+        if apply_filter:
+            # 仅对加速度数据应用滤波器
+            # 设计抗混叠滤波器
+            nyquist_freq = target_freq / 2
+            cutoff_freq = nyquist_freq * self.cutoff_freq_ratio
+            
+            print(f"抗混叠滤波器: 截止频率 = {cutoff_freq:.1f} Hz")
+            
+            # 设计Butterworth低通滤波器
+            b, a = butter(self.butter_order, cutoff_freq, fs=original_freq, btype='low')
+            
+            # 应用零相位滤波器
+            data_filtered = np.zeros_like(data)
+            for axis in range(data.shape[1]):  # 对所有维度应用滤波
+                data_filtered[:, axis] = filtfilt(b, a, data[:, axis])
+        else:
+            # 对其他数据（如四元数、角速度等）直接使用原始数据
+            data_filtered = data
         
         # 执行降采样
         decimated_data = data_filtered[::decimation_factor]
@@ -283,12 +289,13 @@ class IMUAccelerationPostProcessor:
         
         # 4. 降采样（如果需要）
         if target_freq is not None:
+            # 对加速度数据应用滤波和降采样
             final_acc, final_timestamps = self.decimate_data(
-                lin_acc_final, timestamps, original_freq, target_freq)
-            # 降采样四元数数据（如果存在）
+                lin_acc_final, timestamps, original_freq, target_freq, apply_filter=True)
+            # 对四元数数据直接按时间戳提取，不进行滤波处理
             if quat_data is not None:
                 quat_decimated, _ = self.decimate_data(
-                    quat_data, timestamps, original_freq, target_freq)
+                    quat_data, timestamps, original_freq, target_freq, apply_filter=False)
             else:
                 quat_decimated = None
         else:
@@ -369,10 +376,13 @@ class IMUAccelerationPostProcessor:
         # 更新四元数列（如果存在）
         if quat_cols and results['final_quaternion'] is not None:
             print(f"更新四元数列: {quat_cols}")
-            output_df[quat_cols[0]] = results['final_quaternion'][:, 0]
-            output_df[quat_cols[1]] = results['final_quaternion'][:, 1]
-            output_df[quat_cols[2]] = results['final_quaternion'][:, 2]
-            output_df[quat_cols[3]] = results['final_quaternion'][:, 3]
+            # 替换原始四元数列，使用固定的列名 qw,qx,qy,qz
+            if quat_cols[0] in output_df.columns:
+                output_df = output_df.drop(columns=quat_cols)
+            output_df['qw'] = results['final_quaternion'][:, 0]
+            output_df['qx'] = results['final_quaternion'][:, 1]
+            output_df['qy'] = results['final_quaternion'][:, 2]
+            output_df['qz'] = results['final_quaternion'][:, 3]
         
         # 保存到文件
         output_df.to_csv(output_path, index=False)
@@ -388,43 +398,41 @@ class IMUAccelerationPostProcessor:
     
     def plot_acceleration(self, results: dict, save_path: str = None):
         """
-        绘制处理后的加速度数据
+        Plot the processed acceleration data.
         
         Args:
-            results: 处理结果字典
-            save_path: 图片保存路径（可选）
+            results: Dictionary with processed results.
+            save_path: Optional path to save the plot image.
         """
         fig, axes = plt.subplots(3, 1, figsize=(12, 8))
         
-        # 时间轴（只显示前5秒的数据以便清晰观察）
-        max_time = 5.0
-        final_mask = results['final_timestamps'] <= (results['final_timestamps'][0] + max_time)
-        final_t = results['final_timestamps'][final_mask] - results['final_timestamps'][0]
+        # Time axis
+        final_t = results['final_timestamps'] - results['final_timestamps'][0]
         
         axis_names = ['X', 'Y', 'Z']
         colors = ['red', 'blue', 'green']
         
-        title_suffix = '(含重力补偿)' if results['gravity_compensated'] else '(纯运动加速度)'
+        title_suffix = ' (Gravity Compensated)' if results['gravity_compensated'] else ' (Motion-only Acceleration)'
         
         for i in range(3):
             ax = axes[i]
             
-            # 处理后的加速度
-            ax.plot(final_t, results['final_acceleration'][final_mask, i],
+            # Plot processed acceleration
+            ax.plot(final_t, results['final_acceleration'][:, i],
                    color=colors[i], linewidth=2,
-                   label=f'Savitzky-Golay滤波后加速度')
+                   label='Post-SG-Filter Acceleration')
             
-            ax.set_ylabel(f'加速度 {axis_names[i]} (m/s²)')
+            ax.set_ylabel(f'Acceleration {axis_names[i]} (m/s²)')
             ax.legend()
             ax.grid(True, alpha=0.3)
-            ax.set_title(f'{axis_names[i]}轴加速度 {title_suffix}')
+            ax.set_title(f'{axis_names[i]}-axis Acceleration{title_suffix}')
         
-        axes[-1].set_xlabel('时间 (s)')
+        axes[-1].set_xlabel('Time (s)')
         plt.tight_layout()
         
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f"加速度图已保存到: {save_path}")
+            print(f"Acceleration plot saved to: {save_path}")
         
         plt.show()
 
