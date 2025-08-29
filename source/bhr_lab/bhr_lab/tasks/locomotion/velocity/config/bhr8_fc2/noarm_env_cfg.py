@@ -24,6 +24,7 @@ from isaaclab.managers.recorder_manager import (
 from isaaclab.envs.mdp import UniformVelocityCommandCfg
 
 import math
+import datetime
 
 @configclass
 class Bhr8Fc2NoArmRewards(BaseRewardsCfg):
