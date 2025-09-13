@@ -145,17 +145,10 @@ def main():
         # version 2.2 and below
         policy_nn = ppo_runner.alg.actor_critic
 
-    # export policy to onnx/jit
-    export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
-    export_policy_as_jit(policy_nn, ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.pt")
-    export_policy_as_onnx(
-        policy_nn, normalizer=ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.onnx"
-    )
-
     dt = env.unwrapped.step_dt
 
     # reset environment
-    obs, _ = env.get_observations()
+    obs = env.get_observations()
     timestep = 0
     # simulate environment
     while simulation_app.is_running():

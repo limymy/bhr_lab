@@ -56,7 +56,7 @@ class JointStateRecorder(MyRecorderTerm):
             self._next_update_time = torch.full_like(self._timestamp, self._record_period)
         return None, None
 
-    def record_post_physics_step(self) -> tuple[str | None, dict[str, torch.Tensor] | None]:
+    def record_post_physics_decimation_step(self) -> tuple[str | None, dict[str, torch.Tensor] | None]:
         self.update_timestamp()
         
         if self._timestamp[0] < self._next_update_time[0]:
@@ -105,7 +105,7 @@ class ImuRecorder(MyRecorderTerm):
             self._next_update_time = torch.full_like(self._timestamp, self._imu_dt)
         return None, None
 
-    def record_post_physics_step(self):
+    def record_post_physics_decimation_step(self):
         self.update_timestamp()
 
         if self._timestamp[0] < self._next_update_time[0]:
@@ -160,7 +160,7 @@ class ContactRecorder(MyRecorderTerm):
             self._next_update_time = torch.full_like(self._timestamp, self._contact_sensor_dt)
         return None, None
 
-    def record_post_physics_step(self):
+    def record_post_physics_decimation_step(self):
         self.update_timestamp()
 
         # Assuming all envs are synchronized, check the first one
@@ -209,7 +209,7 @@ class CameraRecorder(MyRecorderTerm):
             self._frame_id = torch.zeros(self._env.num_envs, device=self._env.device)
         return super().record_post_reset(env_ids)
 
-    def record_post_physics_step(self):
+    def record_post_physics_decimation_step(self):
         self.update_timestamp()
 
         data = self._cam.data
